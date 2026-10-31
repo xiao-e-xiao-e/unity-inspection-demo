@@ -1,0 +1,13 @@
+.tools/
+bin/
+data/
+*.log
+node_modules/
+dist/
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+[Bb]uilds/
+.env
