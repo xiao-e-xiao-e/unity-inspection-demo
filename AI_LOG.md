@@ -241,3 +241,17 @@ Go 后端需要为 Unity 和 React 提供以下能力：
 - 使用独立临时 SQLite 文件启动编译后的真实服务，完成中文问题创建、状态修改、测试页 HTTP 返回、CORS 预检，以及停止进程后重新启动、核对原 ID/坐标/状态，全部通过。没有向用户的手动测试数据库写入数据。
 - AI 代码复查：发现关闭服务时可能在活动请求退出前关闭数据库，修改为等待 HTTP Shutdown 完成再退出；重新构建并通过真实进程验证。用户人工检查仍待进行，不能把 AI 自查冒充人工验收。
 - 环境问题：默认 Go 模块代理连接超时，改用进程内模块镜像，保留默认模块校验，不改变系统全局配置。依赖要求 Go 1.26，已同步修正启动提示和 README。
+
+## P-007
+
+- 目标：告知 GitHub 仓库已创建，关联第一阶段项目。
+
+### Prompt 原文
+
+> [https://github.com/[REDACTED: GitHub account]/unity-inspection-demo](https://github.com/[REDACTED: GitHub account]/unity-inspection-demo)  github已经创建好了
+
+### 结果
+
+- 采用。
+- 已核实用户提供的仓库存在，更新 README 仓库地址，准备关联 origin 并推送第一阶段提交。推送结果以实际 Git 输出为准。
+- 本次仅处理仓库同步，第一阶段仍待用户手动验收。

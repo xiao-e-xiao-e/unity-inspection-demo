@@ -1,10 +1,14 @@
 # 虚拟现场巡检问题标注
 
+unity-inspection-demo — Virtual inspection demo built with Unity, React, TypeScript and Go.
+
 ## 当前进度
 
 第一阶段：Go HTTP API、SQLite 持久化和手动接口测试页。等待用户手动验收后再进入第二阶段。
 
-尚未完成：Unity 客户端、React 管理端、演示视频、完整 AR 问答。GitHub 远端仓库尚未成功创建；当前仅初始化本地 Git。
+尚未完成：Unity 客户端、React 管理端、演示视频、完整 AR 问答。
+
+GitHub 仓库：https://github.com/xiao-e-xiao-e/unity-inspection-demo （由用户创建，公开可访问）。
 
 ## 版本与依赖
 
