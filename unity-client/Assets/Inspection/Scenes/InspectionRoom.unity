@@ -1771,6 +1771,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   motor: {fileID: 725056332}
   probe: {fileID: 725056330}
+  workflow: {fileID: 725056334}
 --- !u!4 &720677143
 Transform:
   m_ObjectHideFlags: 0
@@ -1881,6 +1882,8 @@ GameObject:
   - component: {fileID: 725056333}
   - component: {fileID: 725056332}
   - component: {fileID: 725056330}
+  - component: {fileID: 725056335}
+  - component: {fileID: 725056334}
   m_Layer: 0
   m_Name: Inspector
   m_TagString: Untagged
@@ -1902,6 +1905,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   viewCamera: {fileID: 799647975}
   hud: {fileID: 720677142}
+  workflow: {fileID: 725056334}
   surfaceMask:
     serializedVersion: 2
     m_Bits: 256
@@ -1965,6 +1969,38 @@ CharacterController:
   m_SkinWidth: 0.08
   m_MinMoveDistance: 0.001
   m_Center: {x: 0, y: 0.9, z: 0}
+--- !u!114 &725056334
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 725056329}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 823e32820e7528e4591eaa20a5675914, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  probe: {fileID: 725056330}
+  motor: {fileID: 725056332}
+  api: {fileID: 725056335}
+  Title: 
+  Description: 
+  PriorityIndex: 1
+--- !u!114 &725056335
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 725056329}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f066fbbbaf0242e48b6b38b9684783fa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  baseUrl: http://127.0.0.1:8080
+  timeoutSeconds: 8
 --- !u!1 &751040191
 GameObject:
   m_ObjectHideFlags: 0

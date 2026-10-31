@@ -6,6 +6,7 @@ namespace Inspection
     {
         public Camera viewCamera;
         public InspectionHud hud;
+        public IssueWorkflow workflow;
         public LayerMask surfaceMask = 1 << 8;
         public Material markerMaterial;
         public float maxDistance = 30f;
@@ -17,7 +18,8 @@ namespace Inspection
 
         private void Update()
         {
-            if (Input.GetKeyDown(KeyCode.Escape)) Clear();
+            if (Input.GetKeyDown(KeyCode.Escape)) { if(workflow!=null)workflow.Cancel();else Clear(); return; }
+            if (hud.BlocksSceneInput) return;
             if (!Input.GetMouseButtonDown(0) || Input.GetMouseButton(1)) return;
             if (hud.ContainsScreenPoint(Input.mousePosition)) return;
             if (TryPick(viewCamera.ScreenPointToRay(Input.mousePosition), out RaycastHit hit))
@@ -31,6 +33,7 @@ namespace Inspection
 
         public void ShowHit(RaycastHit hit)
         {
+            if(workflow!=null && workflow.DraftOpen)return;
             var target = hit.collider.GetComponentInParent<InspectionTarget>();
             TargetName = target != null ? target.displayName : hit.collider.name;
             HitPosition = hit.point; // Store the actual surface coordinate, not the visual offset.
@@ -48,10 +51,23 @@ namespace Inspection
                 marker.transform.localScale = Vector3.one * 0.16f;
             }
             marker.transform.position = hit.point + hit.normal * 0.08f;
+            if(workflow!=null)workflow.BeginDraft();
+        }
+
+        public void Commit(IssueRecord issue)
+        {
+            if(marker==null)return;
+            marker.name="Saved issue / "+issue.id;
+            var properties=new MaterialPropertyBlock();
+            var color=new Color(0.2f,0.85f,0.5f);
+            properties.SetColor("_Color",color);properties.SetColor("_EmissionColor",color*0.5f);
+            marker.GetComponent<Renderer>().SetPropertyBlock(properties);
+            marker=null;HasHit=false;
         }
 
         public void Clear()
         {
+            if(workflow!=null && workflow.IsSubmitting)return;
             if (marker != null) Destroy(marker);
             marker = null;
             HasHit = false;

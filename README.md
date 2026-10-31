@@ -6,9 +6,11 @@ unity-inspection-demo — Virtual inspection demo built with Unity, React, TypeS
 
 第一阶段：Go HTTP API、SQLite 持久化和手动接口测试页已实现；自动测试通过，用户未明确反馈手动验收结果。
 
-第二阶段：用户授权开始 Unity 设备间、移动/视角、射线命中验证。完成后等待用户手动验收，再进入表单与上报阶段。
+第二阶段：Unity 设备间、移动/视角、射线命中验证已实现，自动检查通过。
 
-尚未完成：Unity 问题表单与后端上报、标记恢复、React 管理端、演示视频、完整 AR 问答。
+第三阶段：用户授权继续实现 Unity 问题填写、取消、提交和 Go 联调。完成后等待用户手动验收，再进入 React 管理端阶段。未将“进入下一阶段”当作用户已反馈完整验收结果。
+
+尚未完成：标记恢复、React 管理端、演示视频、完整 AR 问答。
 
 GitHub 仓库：https://github.com/xiao-e-xiao-e/unity-inspection-demo （由用户创建，公开可访问）。
 
@@ -18,7 +20,54 @@ GitHub 仓库：https://github.com/xiao-e-xiao-e/unity-inspection-demo （由用
 - SQLite 驱动：modernc.org/sqlite v1.61.0（纯 Go，不需要 C 编译器），传递依赖见 `server/go.mod`、`server/go.sum`。
 - Unity 使用已安装的 2022.3.62f3c1，内置渲染管线和旧版 Input Manager，无第三方素材或额外输入包；React、TypeScript 的版本在对应阶段固定。
 
-## 第二阶段：Unity 手动验收
+## 第三阶段：问题填写与上报（当前版本）
+
+### 启动
+
+1. 保持第一阶段 Go 服务运行。如果没有运行，在项目根目录执行 `powershell -NoProfile -ExecutionPolicy Bypass -File .\start-backend.ps1`。已有服务占用 8080 时，不要再重复启动。
+2. 双击本机 `bin/unity-stage3/InspectionDemo.exe`；第二阶段程序可以关闭，它不会提供表单和上报功能。程序目录中的 Data、DLL 等配套文件不能拆开。
+3. 点击左上角“检查后端”，应提示服务和数据库连接正常。默认地址 `http://127.0.0.1:8080`；可点“后端地址设置”修改，只对本次运行生效。也可通过 `-apiBaseUrl http://127.0.0.1:8081` 启动参数指定。
+4. 浏览器打开 http://localhost:8080 ，用于核对 Unity 提交后的数据库记录。这仍是第一阶段测试页，React 管理端尚未实现。
+
+从源码运行：用 Unity 2022.3.62f3c1 打开 `unity-client`，打开 `Assets/Inspection/Scenes/InspectionRoom.unity`，按 Play 并在 Game 视图中操作。后端不需要和 Unity 同时重启。
+
+### 手动验收清单
+
+| 测试 | 操作 | 预期 |
+| --- | --- | --- |
+| 正常上报 | 左键点机柜；填中文标题、可选描述，选择 low/medium/high 后提交 | 弹出带命中坐标的表单；提交中按钮禁用；成功后关闭表单，黄色临时球变为绿色，提示后端生成的 ID |
+| 后端核对 | 网页点击“刷新列表” | 标题、描述、优先级、x/y/z 与 Unity 一致，状态 open，ID 和时间非空；描述及时间可从接口 `/api/issues` 查看 |
+| 标题校验 | 空标题或仅空格时提交 | 明确提示标题必填；表单和临时球保留，不新增记录 |
+| 单个草稿 | 打开表单后点击场景背景、连续点击或长按 | 不再创建其他临时球，不改变已经选定的坐标 |
+| 取消 | 填写后点“取消并移除标记”或按 Esc | 表单关闭、未保存的球消失、数据库不新增；已经保存的绿色球不删除 |
+| 输入与移动隔离 | 输入标题时按 W/A/S/D/R，或按住右键移动鼠标 | 仅编辑输入内容，不移动、转向或重置角色 |
+| UI 防误触 | 点击输入框、优先级、按钮、页面说明区 | 不在场景中新增临时标记；关闭表单的那次点击不穿透到场景 |
+| 重复提交 | 快速连续点击提交 | 提交中禁止再次提交和取消；网页仅新增一条问题 |
+| 后端不可用 | 在后端终端 Ctrl+C 停止 Go，然后新建问题并提交 | 显示连接失败或超时，保留标题、描述、优先级和临时球；不能提示成功 |
+| 恢复后重试 | 重新启动 Go，先核对网页列表未保存该条，再回 Unity 提交 | 使用原表单成功提交，无需重新点击设备和填写 |
+| 重启持久化 | 成功提交后重启 Go，网页刷新 | 原 ID、字段和状态仍在 |
+
+网络中断/超时时，服务器可能已经保存但响应未到达。客户端提示“结果未确认”，不自动重试；必须先核对列表再决定重试。首版尚无请求幂等键。
+
+当前绿色球仅代表本次运行已确认保存。重启 Unity 后不会恢复旧标记，但 Go 数据仍在；从后端恢复标记属于后续加分功能。位置是射线实际 `hit.point`，不是球体沿法线偏移后的视觉坐标。
+
+### 第三阶段实现与验证
+
+`IssueWorkflow` 管理浏览/填写/提交状态，校验输入并防止重复提交。`IssueApiClient` 用 UTF-8 JSON 和 UnityWebRequest 访问 Go，8 秒超时，不跟随重定向，不自动重试。成功必须是 HTTP 201 且返回完整问题对象；错误响应和内容异常均不能把草稿变成已保存状态。`InspectionHud` 继续使用 IMGUI，表单弹出后屏蔽全部场景输入。
+
+Unity 编译及 Windows 构建入口：`Inspection.Editor.StageThreeBuilder.BuildAll`。升级菜单 `Inspection > Upgrade Scene to Stage 3` 会保存当前固定场景的第三阶段组件引用。不要用第二阶段 Rebuild 菜单覆盖当前场景。
+
+自动联调脚本：`pwsh -NoProfile -File .\scripts\test-stage3.ps1`。需要本机 Go 工具链、编译好的 `bin/inspection-server.exe` 与 `bin/unity-stage3/InspectionDemo.exe`。脚本使用 18083/18084/18085 端口和 `.tools` 内独立数据库，端口已占用则停止测试，不关闭用户进程。可见 Unity 窗口会自动操作并退出，日志和截图保存在输出的 Artifacts 目录。
+
+覆盖内容：空标题/过长描述/错误地址不发送请求、取消清理、重复提交抑制、真实 Go 保存中文和换行、连接失败保留草稿、恢复后重试、HTTP 400/500、错误成功响应、超时，以及真实后端进程重启后记录仍在。自动测试不会替代用户实际键盘鼠标输入验收。
+
+2026-10-31：第三阶段场景升级、Windows 构建、上述真实联调脚本均通过；已检查可见窗口表单截图。源码与第三阶段程序已就绪，等待用户手动测试。
+
+参考：[UnityWebRequest](https://docs.unity3d.com/2022.3/Documentation/ScriptReference/Networking.UnityWebRequest.html)、[JsonUtility](https://docs.unity3d.com/2022.3/Documentation/ScriptReference/JsonUtility.html)。
+
+## 第二阶段记录（旧测试程序）
+
+以下保留第二阶段验收记录，适用于 `bin/unity-stage2` 中的旧程序。当前 Unity 源码场景已升级第三阶段，编辑器运行时应按上面的第三阶段清单测试。
 
 本阶段无需启动 Go。黄色球体只是射线命中预览，不表示问题已保存，不发送网络请求。
 

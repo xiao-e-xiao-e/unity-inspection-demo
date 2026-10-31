@@ -25,6 +25,7 @@ namespace Inspection
 
         private void Update()
         {
+            if (hud.BlocksSceneInput) { ReleasePointer(); return; }
             if (Input.GetKeyDown(KeyCode.R)) ResetView();
             if (Input.GetKeyDown(KeyCode.Escape)) ReleasePointer();
             if (Input.GetMouseButtonDown(1) && !hud.ContainsScreenPoint(Input.mousePosition))
