@@ -8,9 +8,11 @@ unity-inspection-demo — Virtual inspection demo built with Unity, React, TypeS
 
 第二阶段：Unity 设备间、移动/视角、射线命中验证已实现，自动检查通过。
 
-第三阶段：用户授权继续实现 Unity 问题填写、取消、提交和 Go 联调。完成后等待用户手动验收，再进入 React 管理端阶段。未将“进入下一阶段”当作用户已反馈完整验收结果。
+第三阶段：Unity 问题填写、取消、提交和 Go 联调已实现，真实进程联调通过。
 
-尚未完成：标记恢复、React 管理端、演示视频、完整 AR 问答。
+第四阶段：React 管理端列表、详情、状态更新、筛选和错误处理已实现，等待用户手动验收。未将“进入下一阶段”当作用户已反馈前一阶段完整验收结果。
+
+尚未完成：标记恢复与 Unity 状态同步（加分项）、演示视频、完整 AR 问答及最终整体验收。
 
 GitHub 仓库：https://github.com/xiao-e-xiao-e/unity-inspection-demo （由用户创建，公开可访问）。
 
@@ -18,16 +20,65 @@ GitHub 仓库：https://github.com/xiao-e-xiao-e/unity-inspection-demo （由用
 
 - 本机工具链：Go 1.27.3 windows/amd64（从 https://go.dev/dl/ 下载并核对 SHA-256，位于忽略的 `.tools/go`）。
 - SQLite 驱动：modernc.org/sqlite v1.61.0（纯 Go，不需要 C 编译器），传递依赖见 `server/go.mod`、`server/go.sum`。
-- Unity 使用已安装的 2022.3.62f3c1，内置渲染管线和旧版 Input Manager，无第三方素材或额外输入包；React、TypeScript 的版本在对应阶段固定。
+- Unity 使用已安装的 2022.3.62f3c1，内置渲染管线和旧版 Input Manager，无第三方素材或额外输入包。
+- 管理端：React 19.3.1、TypeScript 7.0.2、Vite 8.3.5；本机 Node.js 24.21.0、npm 11.19.0。依赖由 `admin-web/package-lock.json` 固定；建议使用 Node.js 24 LTS。
 
-## 第三阶段：问题填写与上报（当前版本）
+## 第四阶段：React 管理端（当前验收阶段）
+
+### 启动
+
+1. 保持 Go 后端运行，默认 `http://127.0.0.1:8080`。没有运行时，在项目根目录执行 `powershell -NoProfile -ExecutionPolicy Bypass -File .\start-backend.ps1`。
+2. 新开一个 PowerShell，在项目根目录运行：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\start-admin.ps1
+```
+
+3. 打开 http://localhost:5173 。保留这个终端；按 Ctrl+C 停止前端。首次运行脚本会执行 `npm ci` 安装依赖。5173 被占用时会明确退出，不自动换端口。
+4. 继续使用第三阶段 Unity 程序 `bin/unity-stage3/InspectionDemo.exe` 或 Unity 编辑器。三端均指向同一个 Go 地址。
+
+管理端“连接设置”可修改后端地址，只保存在当前浏览器标签页的会话中；也可在启动前设置 `VITE_API_BASE_URL` 环境变量。默认 Go 跨域配置允许 localhost/127.0.0.1 的 5173 来源。连接失败时先核对地址、Go 服务和 CORS。
+
+### 手动验收清单
+
+| 测试 | 操作 | 预期 |
+| --- | --- | --- |
+| 列表与详情 | 打开管理端，点击已有问题标题或右侧箭头 | 显示标题、优先级和状态；详情显示完整 ID、描述、x/y/z 与时间 |
+| Unity → React | 在第三阶段 Unity 程序提交一个易识别的新标题，回管理端点击“刷新问题” | 出现同一条问题，状态为待处理；详情坐标与 Unity 一致 |
+| 修改状态 | 在该问题行或详情中选择“处理中”，等待成功提示，再选择“已解决” | 状态分别保存为 in_progress、resolved；请求进行中禁止重复操作 |
+| 网页刷新 | 刷新整个浏览器 | 状态仍为已解决，原 ID 不变 |
+| 筛选 | 搜索标题，选择优先级或状态；点击统计卡片 | 显示匹配记录；无匹配时显示空结果；清除筛选可恢复 |
+| 后端停止 | 保留前端运行，在 Go 终端 Ctrl+C，然后点击“刷新问题” | 显示连接错误，不白屏；保留上次数据并提示可能过期，禁止修改状态 |
+| 断连首次加载 | Go 仍停止时刷新整个浏览器 | 页面仍可打开，显示错误和“重新获取”，不把失败当成空数据库 |
+| 重启持久化 | 重启同一个 Go 启动脚本，点击“重新获取” | 原问题 ID、字段和 resolved 状态仍在；可继续修改状态 |
+| 地址恢复 | 在“连接设置”填入无服务的本机端口并应用，再恢复默认地址并应用 | 错误提示后恢复正常列表；不影响 Go 数据 |
+
+中文状态对应：待处理 = open，处理中 = in_progress，已解决 = resolved。状态可在三者之间切换。页面不自动轮询，Unity 上报后需要点“刷新问题”。Unity 中的绿色球仅表示提交成功，暂不随网页状态变化。
+
+### 实现与验证
+
+`src/api.ts` 定义三端一致的数据类型、接口请求和返回校验；`useIssues.ts` 管理列表、请求取消和状态保存；`App.tsx` 提供列表、详情、筛选及连接设置。状态更新等待后端确认后才更新页面。请求 8 秒超时；修改失败或超时时提示结果未确认，应先刷新核对，不自动重试。刷新失败会保留并标注旧数据；顶层 ErrorBoundary 提供异常兜底。
+
+在 `admin-web` 目录运行：
+
+```powershell
+npm.cmd ci
+npm.cmd test
+npm.cmd run build
+```
+
+2026-10-31：10 项自动测试、TypeScript 检查与生产构建通过。测试使用模拟 HTTP 响应，覆盖空列表、断连重试、筛选详情、状态确认后更新、重复点击防护、保存失败、旧数据保护、异常响应与超时。浏览器实际验证了从当前 Go 服务跨域读取已有记录、详情坐标、筛选空结果、切换不可用地址后的错误提示及恢复连接；已查看完整页面截图。
+
+本阶段启动独立后端并写入测试数据的组合命令被自动审批以 `blocked by policy` 拦截，没有执行；没有修改用户现有记录。真实浏览器状态写入、Unity 新问题到 React 的完整流程及本阶段重启持久化仍需按上述清单手动验收，不能由模拟测试替代。
+
+## 第三阶段：问题填写与上报
 
 ### 启动
 
 1. 保持第一阶段 Go 服务运行。如果没有运行，在项目根目录执行 `powershell -NoProfile -ExecutionPolicy Bypass -File .\start-backend.ps1`。已有服务占用 8080 时，不要再重复启动。
 2. 双击本机 `bin/unity-stage3/InspectionDemo.exe`；第二阶段程序可以关闭，它不会提供表单和上报功能。程序目录中的 Data、DLL 等配套文件不能拆开。
 3. 点击左上角“检查后端”，应提示服务和数据库连接正常。默认地址 `http://127.0.0.1:8080`；可点“后端地址设置”修改，只对本次运行生效。也可通过 `-apiBaseUrl http://127.0.0.1:8081` 启动参数指定。
-4. 浏览器打开 http://localhost:8080 ，用于核对 Unity 提交后的数据库记录。这仍是第一阶段测试页，React 管理端尚未实现。
+4. 当前可打开 http://localhost:5173 使用第四阶段 React 管理端核对记录；http://localhost:8080 仍保留第一阶段辅助测试页。
 
 从源码运行：用 Unity 2022.3.62f3c1 打开 `unity-client`，打开 `Assets/Inspection/Scenes/InspectionRoom.unity`，按 Play 并在 Game 视图中操作。后端不需要和 Unity 同时重启。
 
@@ -204,5 +255,5 @@ cd 'E:\Project\Unity-3D巡检实操题\server'
 
 - 未实现创建请求幂等性；超时后应先刷新确认记录，再决定是否再次提交。测试页不自动重试创建。
 - 列表尚未分页，无删除功能；当前服务适用于小规模本地演示。
-- Unity 实际鼠标/键盘体验与 UI 点击需要第二阶段手动验收；React 浏览器跨域联调需在对应阶段验证，不能用后端测试替代。
+- Unity 实际鼠标/键盘体验与 UI 点击仍需手动验收；React 跨域读取已验证，真实浏览器状态写入和三端完整流程需按第四阶段清单验收。
 - 完整交付所需 AR 问答和两段 3–5 分钟视频待后续补齐；“真机”暂按实际桌面电脑运行理解，最终需确认。
