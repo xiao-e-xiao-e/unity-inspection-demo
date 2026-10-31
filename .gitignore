@@ -11,3 +11,8 @@ dist/
 [Uu]ser[Ss]ettings/
 [Bb]uilds/
 .env
+*.csproj
+*.sln
+.vs/
+*.pidb
+*.user

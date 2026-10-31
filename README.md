@@ -4,9 +4,11 @@ unity-inspection-demo — Virtual inspection demo built with Unity, React, TypeS
 
 ## 当前进度
 
-第一阶段：Go HTTP API、SQLite 持久化和手动接口测试页。等待用户手动验收后再进入第二阶段。
+第一阶段：Go HTTP API、SQLite 持久化和手动接口测试页已实现；自动测试通过，用户未明确反馈手动验收结果。
 
-尚未完成：Unity 客户端、React 管理端、演示视频、完整 AR 问答。
+第二阶段：用户授权开始 Unity 设备间、移动/视角、射线命中验证。完成后等待用户手动验收，再进入表单与上报阶段。
+
+尚未完成：Unity 问题表单与后端上报、标记恢复、React 管理端、演示视频、完整 AR 问答。
 
 GitHub 仓库：https://github.com/xiao-e-xiao-e/unity-inspection-demo （由用户创建，公开可访问）。
 
@@ -14,7 +16,51 @@ GitHub 仓库：https://github.com/xiao-e-xiao-e/unity-inspection-demo （由用
 
 - 本机工具链：Go 1.27.3 windows/amd64（从 https://go.dev/dl/ 下载并核对 SHA-256，位于忽略的 `.tools/go`）。
 - SQLite 驱动：modernc.org/sqlite v1.61.0（纯 Go，不需要 C 编译器），传递依赖见 `server/go.mod`、`server/go.sum`。
-- Unity 计划使用已安装的 2022.3.62f3c1；React、TypeScript 的版本在对应阶段固定。
+- Unity 使用已安装的 2022.3.62f3c1，内置渲染管线和旧版 Input Manager，无第三方素材或额外输入包；React、TypeScript 的版本在对应阶段固定。
+
+## 第二阶段：Unity 手动验收
+
+本阶段无需启动 Go。黄色球体只是射线命中预览，不表示问题已保存，不发送网络请求。
+
+### 方法 A：Windows 测试程序
+
+本机已构建时，双击 `bin/unity-stage2/InspectionDemo.exe`。整个 `unity-stage2` 目录必须保持完整。程序产物不提交 Git；其他电脑可以按方法 B 打开源码，或者自行通过 Unity 的 File > Build Settings > Windows x86_64 构建。
+
+### 方法 B：Unity 编辑器
+
+```powershell
+cd 'E:\Project\Unity-3D巡检实操题'
+powershell -NoProfile -ExecutionPolicy Bypass -File .\open-unity.ps1
+```
+
+也可在 Unity Hub 中添加 `unity-client` 目录，用 **2022.3.62f3c1** 打开。首次导入完成后，在 Project 面板双击 `Assets/Inspection/Scenes/InspectionRoom.unity`，按顶部 Play，再点击 Game 画面使其获得焦点。不要在 Scene 视图中测试角色输入。结束时再次点击 Play。
+
+| 步骤 | 操作 | 预期 |
+| --- | --- | --- |
+| 1 | 查看起始画面 | 两台带编号机柜、后方水泵和管线、地面与墙体；左上角中文操作说明 |
+| 2 | WASD 移动，按住右键移动鼠标 | 可以走动并转动视角；松开右键恢复鼠标指针 |
+| 3 | 朝墙或机柜走 | 被碰撞体挡住，不穿墙、不穿机柜，不落到地板下 |
+| 4 | 松开右键，左键点击两台机柜不同位置及地面 | 底部显示不同对象名称和命中世界坐标；黄色球贴近所点表面 |
+| 5 | 地面点击 | Y 应接近 0；机柜正面点击时 Z 应接近 1.000（命中主碰撞体） |
+| 6 | 按住左键，再在不同位置单击 | 一次按下仅触发一次；新的点击移动同一个预览点，不累积球体；点击计数按有效点击增加 |
+| 7 | 点击左上角按钮、文字区域和底部面板 | 不增加有效点击次数、不向背后场景放置预览；清除按钮删除已有预览 |
+| 8 | 按 Esc | 清除预览并释放鼠标；不是退出程序 |
+| 9 | 走远后按 R 或“回到起点” | 回到初始位置与朝向 |
+| 10 | Alt+Tab 切出再返回 | 鼠标不被永久锁住；可以重新按住右键观察 |
+
+关闭 Windows 程序用标题栏关闭按钮或 Alt+F4。退出后预览不恢复，属于本阶段预期行为。
+
+代码职责：`FirstPersonMotor` 管理 CharacterController、重力和鼠标；`SurfaceProbe` 使用单次点击和限定 LayerMask 做 Physics.Raycast，保存原始 hit.point；`InspectionHud` 提供阶段测试 HUD，显式屏蔽 UI 区域的场景点击；`InspectionTarget` 提供稳定编号及名称。
+
+预览球仅视觉上沿法线偏移，显示坐标没有偏移；预览无碰撞体并在 Ignore Raycast 层，不会挡住后续射线。当前 HUD 为 IMGUI 测试界面，尚未添加问题输入表单。静态设备装饰片不参与射线，命中设备主碰撞体。
+
+编辑器菜单 `Inspection > Validate Stage 2 Scene` 校验固定测试场景的机柜/地面命中点、无命中射线、墙体碰撞。`Inspection > Rebuild Stage 2 Scene` 会重新生成当前阶段场景，覆盖该场景文件；手动调整场景后不要随意使用此菜单。
+
+2026-10-31 第二阶段自动检查：场景保存后重新打开验证通过；Windows Development Build 成功；实际程序内的 UI 区域判断、十次选择仅一个预览、清除、原始命中坐标、移动与墙体碰撞、回到起点检查通过。可见窗口截图已检查，中文 HUD 和场景正常。真实键盘鼠标操作仍等待用户验收。
+
+可复现运行时检查（会自动移动角色并退出，不适用于手动体验）：从项目根目录运行 `bin\unity-stage2\InspectionDemo.exe -stage2Smoke -smokeScreenshot stage2-check.png -logFile stage2-check.log`。这是 Development Build 中通过显式参数启用的测试，普通双击运行不会执行。需要可见窗口；隐藏窗口的图像捕获可能是黑屏。
+
+实现参考：[CharacterController.Move](https://docs.unity3d.com/2022.3/Documentation/ScriptReference/CharacterController.Move.html)、[Physics.Raycast](https://docs.unity3d.com/2022.3/Documentation/ScriptReference/Physics.Raycast.html)、[Unity 命令行](https://docs.unity3d.com/2022.3/Documentation/Manual/EditorCommandLineArguments.html)。
 
 ## 启动第一阶段
 
@@ -109,5 +155,5 @@ cd 'E:\Project\Unity-3D巡检实操题\server'
 
 - 未实现创建请求幂等性；超时后应先刷新确认记录，再决定是否再次提交。测试页不自动重试创建。
 - 列表尚未分页，无删除功能；当前服务适用于小规模本地演示。
-- Unity 实际射线、UI 误触、React 浏览器跨域联调需在后续阶段验证，不能用当前后端测试替代。
+- Unity 实际鼠标/键盘体验与 UI 点击需要第二阶段手动验收；React 浏览器跨域联调需在对应阶段验证，不能用后端测试替代。
 - 完整交付所需 AR 问答和两段 3–5 分钟视频待后续补齐；“真机”暂按实际桌面电脑运行理解，最终需确认。
