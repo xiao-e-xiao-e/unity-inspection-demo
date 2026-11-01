@@ -51,13 +51,13 @@ export default function App() {
       <span className="nav-caption">现场管理</span>
       <nav aria-label="主导航"><button className="nav-active" onClick={() => { clearFilters(); setSelectedId(null); }}><Symbol />问题管理<span className="nav-count">{state.updatedAt ? state.issues.length : '—'}</span></button></nav>
       <div className="sidebar-note"><span className="note-dot" />从现场发现，到问题解决<p>接收 Unity 现场上报，集中查看并跟进处理进度。</p></div>
-      <div className="sidebar-bottom"><span>虚拟设备间</span><small>本地演示 · 第四阶段</small><button onClick={() => setHelp(value => !value)}>使用说明 <span aria-hidden="true">↗</span></button></div>
+      <div className="sidebar-bottom"><span>虚拟设备间</span><small>虚拟巡检系统</small><button onClick={() => setHelp(value => !value)}>使用说明 <span aria-hidden="true">↗</span></button></div>
     </aside>
     <div className="workspace">
       <header className="topbar"><div><span>现场管理</span><span className="slash">/</span><strong>问题管理</strong></div><button className="text-button" disabled={!!state.pendingId} onClick={() => { setDraftBase(base); setSettingsError(''); setSettingsOpen(true); }}><Symbol kind="settings" />连接设置</button></header>
       <main>
         <div className="page-heading"><div><p className="eyebrow">ISSUE MANAGEMENT</p><h1>每一个问题，都有迹可循。</h1><p className="intro">查看现场上报，确认问题详情，推动处理进度。</p></div><button className="primary" onClick={() => void state.reload()} disabled={state.loading || !!state.pendingId}><Symbol kind="refresh" />{state.loading ? '正在刷新…' : '刷新问题'}</button></div>
-        {help && <section className="help-box"><h2>一次完整巡检流程</h2><p>在 Unity 第三阶段程序中点击设备并上报 → 点击此页“刷新问题” → 打开问题详情 → 选择处理状态。状态保存到 Go 后端，刷新网页后仍然保留。</p><p>当前页面不会自动轮询。Unity 重启恢复标记、同步管理端状态尚未实现。</p><button className="text-button" onClick={() => setHelp(false)}>收起说明</button></section>}
+        {help && <section className="help-box"><h2>一次完整巡检流程</h2><p>在 Unity 客户端中点击设备并上报 → 点击此页“刷新问题” → 打开问题详情 → 选择处理状态。状态保存到 Go 后端，刷新网页后仍然保留。</p><p>当前页面不会自动轮询。Unity 重启恢复标记、同步管理端状态尚未实现。</p><button className="text-button" onClick={() => setHelp(false)}>收起说明</button></section>}
         <div className="metrics" aria-label="问题统计">{metrics.map(metric => <button key={metric.filter} className={`metric ${metric.className} ${status === metric.filter ? 'chosen' : ''}`} aria-pressed={status === metric.filter} onClick={() => setStatus(metric.filter)}><span>{metric.name}<i /></span><strong>{state.updatedAt ? metric.value : '—'}</strong><small>{metric.caption}</small></button>)}</div>
         {(state.loadError || state.actionError) && <div className="alert error" role="alert"><strong>{state.loadError ? '无法获取最新问题' : '状态修改未确认'}</strong><p>{state.loadError || state.actionError}</p>{state.updatedAt && state.loadError && <p>以下为上次获取的数据，恢复连接并刷新后才能修改。</p>}<button onClick={() => void state.reload()} disabled={state.loading || !!state.pendingId}>重新获取</button></div>}
         {state.notice && <div className="alert success" role="status">✓ {state.notice}</div>}

@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace Inspection
 {
-    // Stage-two diagnostic HUD. UI hit regions explicitly block scene clicks.
+    // Inspection form and status HUD. UI hit regions explicitly block scene clicks.
     public sealed class InspectionHud : MonoBehaviour
     {
         public FirstPersonMotor motor;
@@ -17,8 +17,8 @@ namespace Inspection
         private GUIStyle field, feedback;
         private Font font;
         private float Scale => Mathf.Clamp(Screen.width / 1440f, 0.65f, 1.3f);
-        private Rect Header => new Rect(24, 24, 390, workflow==null ? 184 : 246);
-        private Rect Footer => new Rect(24, Screen.height / Scale - (workflow==null ? 180 : 226), 520, workflow==null ? 156 : 202);
+        private Rect Header => new Rect(24, 24, 390, 246);
+        private Rect Footer => new Rect(24, Screen.height / Scale - 226, 520, 202);
 
         public bool ContainsScreenPoint(Vector2 point)
         {
@@ -45,29 +45,11 @@ namespace Inspection
             PrepareStyles();
             Matrix4x4 previous = GUI.matrix;
             GUI.matrix = Matrix4x4.Scale(Vector3.one * Scale);
-            if(workflow!=null)
-            {
-                DrawStageThree();
-                GUI.matrix=previous;
-                return;
-            }
-            DrawPanel(Header);
-            GUI.Label(new Rect(42, 35, 350, 36), "设备间 · 虚拟巡检", heading);
-            GUI.Label(new Rect(42, 75, 350, 28), "WASD 移动   |   按住右键转动视角", text);
-            GUI.Label(new Rect(42, 106, 350, 28), "左键检测表面   |   Esc 清除命中点", muted);
-            if (GUI.Button(new Rect(42, 150, 165, 38), "回到起点 [R]", button)) motor.ResetView();
-            if (GUI.Button(new Rect(220, 150, 165, 38), "清除命中点", button)) probe.Clear();
-            Rect bottom = Footer;
-            DrawPanel(bottom);
-            GUI.Label(new Rect(bottom.x + 18, bottom.y + 12, 460, 28), "射线命中 / " + probe.TargetName, text);
-            string position = probe.HasHit ? string.Format("X {0:F3}    Y {1:F3}    Z {2:F3}", probe.HitPosition.x, probe.HitPosition.y, probe.HitPosition.z) : "点击机柜、管道、地面或墙面进行验证";
-            GUI.Label(new Rect(bottom.x + 18, bottom.y + 47, 460, 28), position, coordinate);
-            GUI.Label(new Rect(bottom.x + 18, bottom.y + 84, 460, 26), "第二阶段：命中预览，未保存或上报", muted);
-            GUI.Label(new Rect(bottom.x + 18, bottom.y + 113, 460, 26), "有效点击次数：" + probe.HitCount, muted);
+            if(workflow!=null) DrawInspection();
+            else GUI.Label(new Rect(42,35,800,50),"巡检组件配置缺失，请重新打开 InspectionRoom 场景。",heading);
             GUI.matrix = previous;
         }
-
-        private void DrawStageThree()
+        private void DrawInspection()
         {
             bool modal=workflow.DraftOpen || editingBackend;
             GUI.enabled=!modal;
@@ -83,7 +65,7 @@ namespace Inspection
             { editingBackend=true;addressDraft=workflow.api.baseUrl;motor.ReleasePointer();suppressedFrame=Time.frameCount; }
             GUI.enabled=true;
             DrawPanel(Footer);
-            GUI.Label(new Rect(Footer.x+18,Footer.y+10,484,28),"第三阶段 · 本次已上报 "+workflow.SavedCount+" 条",text);
+            GUI.Label(new Rect(Footer.x+18,Footer.y+10,484,28),"本次已上报 "+workflow.SavedCount+" 条",text);
             feedback.normal.textColor=workflow.IsError?new Color(1f,0.53f,0.47f):new Color(0.7f,0.9f,0.82f);
             GUI.Label(new Rect(Footer.x+18,Footer.y+47,484,115),workflow.Feedback,feedback);
             GUI.Label(new Rect(Footer.x+18,Footer.y+165,484,26),"黄色：未保存    绿色：后端已确认保存",muted);

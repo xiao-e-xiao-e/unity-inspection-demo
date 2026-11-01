@@ -9,13 +9,13 @@ using Object = UnityEngine.Object;
 
 namespace Inspection.Editor
 {
-    public static class StageTwoBuilder
+    public static class InspectionSceneBuilder
     {
         private const string Root = "Assets/Inspection";
         public const string ScenePath = Root + "/Scenes/InspectionRoom.unity";
         private static Material floor, wall, dark, steel, cyan, green, amber;
 
-        [MenuItem("Inspection/Rebuild Stage 2 Scene")]
+        [MenuItem("Inspection/Rebuild Inspection Scene")]
         public static void BuildScene()
         {
             Directory.CreateDirectory(Root + "/Scenes");
@@ -72,7 +72,7 @@ namespace Inspection.Editor
             cameraObject.AddComponent<AudioListener>();
             var motor=player.AddComponent<FirstPersonMotor>();motor.viewCamera=camera;
             var probe=player.AddComponent<SurfaceProbe>();probe.viewCamera=camera;probe.markerMaterial=amber;
-            var hud=new GameObject("Stage 2 HUD").AddComponent<InspectionHud>();hud.motor=motor;hud.probe=probe;motor.hud=hud;probe.hud=hud;
+            var hud=new GameObject("Inspection HUD").AddComponent<InspectionHud>();hud.motor=motor;hud.probe=probe;motor.hud=hud;probe.hud=hud;
             var tags=new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]);tags.FindProperty("layers").GetArrayElementAtIndex(8).stringValue="InspectionSurface";tags.ApplyModifiedProperties();
             PlayerSettings.productName="Virtual Inspection";PlayerSettings.companyName="Inspection Demo";
             PlayerSettings.defaultScreenWidth=1440;PlayerSettings.defaultScreenHeight=900;PlayerSettings.fullScreenMode=FullScreenMode.Windowed;PlayerSettings.runInBackground=false;
@@ -82,8 +82,8 @@ namespace Inspection.Editor
             AssetDatabase.SaveAssets();
             EditorSceneManager.OpenScene(ScenePath);
             Validate();
-            CapturePreview(Camera.main);
-            Debug.Log("STAGE2_SCENE_PASS: scene generated, saved and validated.");
+            InspectionBuilder.PrepareScene();
+            Debug.Log("SCENE_SCENE_PASS: scene generated, saved and validated.");
         }
 
         private static Material Material(string name,Color color,bool emission=false)
@@ -123,7 +123,7 @@ namespace Inspection.Editor
             text.font=Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");obj.GetComponent<MeshRenderer>().sharedMaterial=text.font.material;
         }
 
-        [MenuItem("Inspection/Validate Stage 2 Scene")]
+        [MenuItem("Inspection/Validate Scene")]
         public static void Validate()
         {
             Physics.SyncTransforms();
@@ -143,28 +143,8 @@ namespace Inspection.Editor
             var motor=Object.FindObjectOfType<FirstPersonMotor>();var cc=motor.GetComponent<CharacterController>();var start=motor.transform.position;
             cc.Move(Vector3.forward*30);if(motor.transform.position.z>8.7f)throw new Exception("Character passed through wall");
             cc.enabled=false;motor.transform.position=start;cc.enabled=true;
-            Debug.Log("STAGE2_VALIDATION_PASS: cabinet/floor ray positions, no-hit and wall collision.");
+            Debug.Log("SCENE_VALIDATION_PASS: cabinet/floor ray positions, no-hit and wall collision.");
         }
 
-        private static void CapturePreview(Camera camera)
-        {
-            if(SystemInfo.graphicsDeviceType==GraphicsDeviceType.Null)return;
-            var rt=new RenderTexture(1440,900,24);var previous=RenderTexture.active;
-            camera.targetTexture=rt;camera.Render();RenderTexture.active=rt;
-            var image=new Texture2D(1440,900,TextureFormat.RGB24,false);image.ReadPixels(new Rect(0,0,1440,900),0,0);image.Apply();
-            File.WriteAllBytes(Path.GetFullPath("../.tools/stage2-scene.png"),image.EncodeToPNG());
-            camera.targetTexture=null;RenderTexture.active=previous;Object.DestroyImmediate(image);Object.DestroyImmediate(rt);
-        }
-
-        public static void BuildWindows()
-        {
-            EditorSceneManager.OpenScene(ScenePath);Validate();
-            Directory.CreateDirectory("../bin/unity-stage2");
-            var report=BuildPipeline.BuildPlayer(new[]{ScenePath},"../bin/unity-stage2/InspectionDemo.exe",BuildTarget.StandaloneWindows64,BuildOptions.Development);
-            if(report.summary.result!=BuildResult.Succeeded)throw new Exception("Windows build failed: "+report.summary.result);
-            Debug.Log("STAGE2_BUILD_PASS");
-        }
-
-        public static void BuildAll() { BuildScene(); BuildWindows(); }
     }
 }

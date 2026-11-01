@@ -7,14 +7,14 @@ using UnityEngine.Networking;
 
 namespace Inspection
 {
-    public sealed class StageThreeSmoke : MonoBehaviour
+    public sealed class InspectionSmoke : MonoBehaviour
     {
         private bool failed;
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Initialize()
         {
-            if(Array.IndexOf(Environment.GetCommandLineArgs(),"-stage3Smoke")<0)return;
-            Application.runInBackground=true;new GameObject("Stage3 integration smoke").AddComponent<StageThreeSmoke>();
+            if(Array.IndexOf(Environment.GetCommandLineArgs(),"-inspectionSmoke")<0)return;
+            Application.runInBackground=true;new GameObject("Inspection integration smoke").AddComponent<InspectionSmoke>();
         }
         private void OnEnable(){Application.logMessageReceived+=OnLog;}
         private void OnDisable(){Application.logMessageReceived-=OnLog;}
@@ -38,7 +38,7 @@ namespace Inspection
             flow.Title="测试";flow.Description=new string('测',2001);flow.Submit();Require(flow.CreateAttempts==0,"Long description sent request");
             flow.Cancel();yield return null;
             Require(!flow.DraftOpen && !probe.HasHit && GameObject.Find("Raycast hit preview (not saved)")==null,"Cancel left pending marker");
-            probe.ShowHit(hit);flow.Title="阶段三联调测试 🔧";flow.Description="机柜右侧温度偏高\n中文与换行验证";flow.PriorityIndex=0;
+            probe.ShowHit(hit);flow.Title="巡检联调测试 🔧";flow.Description="机柜右侧温度偏高\n中文与换行验证";flow.PriorityIndex=0;
             flow.Submit();flow.Submit();flow.Cancel();
             Require(flow.IsSubmitting && flow.DraftOpen && flow.CreateAttempts==1,"Double submit/cancel while submitting was accepted");
             yield return AwaitSubmission(flow);
@@ -86,7 +86,7 @@ namespace Inspection
                 }
             }
             flow.Cancel();
-            Debug.Log(failed?"STAGE3_RUNTIME_FAIL":"STAGE3_RUNTIME_PASS: draft cancellation, validation, duplicate suppression, actual Go save, retry, HTTP 400/500, malformed response, timeout, rendered form.");
+            Debug.Log(failed?"INSPECTION_RUNTIME_FAIL":"INSPECTION_RUNTIME_PASS: draft cancellation, validation, duplicate suppression, actual Go save, retry, HTTP 400/500, malformed response, timeout, rendered form.");
             Application.Quit(failed?1:0);
         }
     }

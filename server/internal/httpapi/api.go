@@ -2,7 +2,6 @@ package httpapi
 
 import (
 	"database/sql"
-	"embed"
 	"encoding/json"
 	"errors"
 	"io"
@@ -16,9 +15,6 @@ import (
 	"inspection/server/internal/model"
 	"inspection/server/internal/storage"
 )
-
-//go:embed tester.html
-var pages embed.FS
 
 type API struct{ store *storage.Store }
 type apiError struct {
@@ -51,11 +47,6 @@ func New(store *storage.Store, origins []string) http.Handler {
 	mux.HandleFunc("GET /api/issues", a.list)
 	mux.HandleFunc("POST /api/issues", a.create)
 	mux.HandleFunc("PATCH /api/issues/{id}/status", a.update)
-	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
-		body, _ := pages.ReadFile("tester.html")
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.Write(body)
-	})
 	allowed := map[string]bool{}
 	for _, o := range origins {
 		allowed[strings.TrimSpace(o)] = true

@@ -8,11 +8,10 @@ Unity 虚拟现场 → 点击标记并上报 → Go + SQLite 保存 → React �
 
 必做功能源码已实现：基础设备间、移动与视角、射线命中标记、问题填写与取消、提交反馈、UI 防误触、React 列表与状态修改、Go 校验/持久化/CORS。管理端另有搜索、筛选和详情。
 
-第五阶段（2026-11-01）完成文档整理和 Go / React 自动回归。**最终人工全流程验收、两段视频及视频分享链接尚未完成，不标为最终交付完成。** 继续开发的授权不等于用户已反馈测试通过。
+用户已于 2026-11-01 确认功能测试全部通过、无异常；详见验收记录。当前整理为一套统一系统。**独立克隆启动核验、本人代码审核、两段视频及分享链接仍待完成。**
 
 - [最终验收清单与验证证据](docs/acceptance.md)
 - [两段视频录制脚本](docs/demo-recording.md)
-- [详细阶段历史与接口说明](docs/stage-history.md)
 - [AI 使用记录](AI_LOG.md)
 
 ## 版本与源码
@@ -44,13 +43,13 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\start-backend.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\start-admin.ps1
 ```
 
-首次自动执行 npm ci；打开 http://localhost:5173 ，保持终端运行。也可在 admin-web 执行 `npm.cmd ci`、`npm.cmd run dev`。5173 占用时明确退出，不自动换端口。8080 根路径仍是辅助测试页，不能代替 React 演示。
+首次自动执行 npm ci；打开 http://localhost:5173 ，保持终端运行。也可在 admin-web 执行 `npm.cmd ci`、`npm.cmd run dev`。5173 占用时明确退出，不自动换端口。后端只提供 API，唯一管理页面是 5173。
 
 默认后端为 `http://127.0.0.1:8080`，右上角“连接设置”可修改，仅保存于当前标签页会话；启动/构建前也可设置 VITE_API_BASE_URL。页面不自动轮询，Unity 上报后点“刷新问题”。
 
 **Unity 客户端**：Unity Hub 添加 unity-client，用上述版本打开。加载 `Assets/Inspection/Scenes/InspectionRoom.unity`，按 Play，在 Game 视图操作。WASD 移动，按住右键转向，松开右键后左键点击放置，R 回到起点，Esc 取消草稿。
 
-本机可运行 `bin/unity-stage3/InspectionDemo.exe`，配套目录不能拆开。构建产物不在 Git；新电脑可直接使用 Editor，或在 File > Build Settings 加入该场景后构建 Windows x86_64。自动构建入口是 `Inspection.Editor.StageThreeBuilder.BuildAll`，不要用旧 Stage 2 重建菜单覆盖场景。
+本机可运行 `bin/unity/InspectionDemo.exe`，配套目录不能拆开。构建产物不在 Git；新电脑可直接使用 Editor，或在 File > Build Settings 加入该场景后构建 Windows x86_64。自动构建入口是 `Inspection.Editor.InspectionBuilder.BuildAll`。在项目根目录执行 `powershell -NoProfile -ExecutionPolicy Bypass -File .\build-unity.ps1` 构建，执行 `powershell -NoProfile -ExecutionPolicy Bypass -File .\start-unity.ps1` 启动。
 
 Unity 使用同一后端地址；左上角设置或 `-apiBaseUrl http://127.0.0.1:8080` 参数可更改。黄色球为草稿，确认保存后变绿，取消则移除。
 
@@ -89,7 +88,9 @@ CORS 允许 localhost/127.0.0.1 的 5173 与 8080 来源及 GET/POST/PATCH/OPTIO
 
 ## 验证与已知限制
 
-在 server 执行 `go test ./... -count=1`、`go vet ./...`；在 admin-web 执行 `npm.cmd test`、`npm.cmd run build`。2026-11-01 均通过；前端 10 项测试使用模拟 HTTP。Unity 真实进程验证见阶段历史，本阶段未重新运行；最终鼠标键盘全流程仍待人工验收。
+在 server 执行 `go test ./... -count=1`、`go vet ./...`；在 admin-web 执行 `npm.cmd test`、`npm.cmd run build`。2026-11-01 均通过；前端 10 项测试使用模拟 HTTP。用户已完成实际鼠标键盘功能测试。统一后的客户端通过 Unity 编译与构建检查；详细证据及范围见验收记录。
+
+可选完整自动联调：先构建后端和 Unity，再运行 `pwsh -NoProfile -File .\scripts\test-integration.ps1`。使用 18083/18084/18085 端口及 `.tools` 内独立数据库，端口占用时退出；会打开测试客户端并在结束时关闭自己的进程，不影响日常数据库。仅在显式 `-inspectionSmoke` 参数下执行测试，普通启动不触发。此次整理只验证脚本语法、编译和现有 Go/React 测试，未重跑该写入联调。
 
 - 创建无幂等键，超时后先刷新核对再决定重试，避免重复上报。
 - Unity 重启不恢复标记，绿色球不随管理端状态变化，属于未实现的加分项。

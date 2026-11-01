@@ -7,12 +7,12 @@ using UnityEngine;
 
 namespace Inspection.Editor
 {
-    public static class StageThreeBuilder
+    public static class InspectionBuilder
     {
-        [MenuItem("Inspection/Upgrade Scene to Stage 3")]
-        public static void Upgrade()
+        [MenuItem("Inspection/Prepare Inspection Scene")]
+        public static void PrepareScene()
         {
-            EditorSceneManager.OpenScene(StageTwoBuilder.ScenePath);
+            EditorSceneManager.OpenScene(InspectionSceneBuilder.ScenePath);
             var motor=UnityEngine.Object.FindObjectOfType<FirstPersonMotor>();
             var probe=UnityEngine.Object.FindObjectOfType<SurfaceProbe>();
             var hud=UnityEngine.Object.FindObjectOfType<InspectionHud>();
@@ -22,17 +22,18 @@ namespace Inspection.Editor
             PlayerSettings.insecureHttpOption=InsecureHttpOption.AlwaysAllowed; // Local demo API uses HTTP.
             EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
             EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene());AssetDatabase.SaveAssets();
-            EditorSceneManager.OpenScene(StageTwoBuilder.ScenePath);
-            StageTwoBuilder.Validate();
+            EditorSceneManager.OpenScene(InspectionSceneBuilder.ScenePath);
+            InspectionSceneBuilder.Validate();
             if(UnityEngine.Object.FindObjectOfType<InspectionHud>().workflow==null)throw new Exception("Workflow reference not saved");
-            Debug.Log("STAGE3_SCENE_PASS");
+            Debug.Log("INSPECTION_SCENE_PASS");
         }
+        [MenuItem("Inspection/Build Windows Client")]
         public static void BuildAll()
         {
-            Upgrade();Directory.CreateDirectory("../bin/unity-stage3");
-            var report=BuildPipeline.BuildPlayer(new[]{StageTwoBuilder.ScenePath},"../bin/unity-stage3/InspectionDemo.exe",BuildTarget.StandaloneWindows64,BuildOptions.Development);
-            if(report.summary.result!=BuildResult.Succeeded)throw new Exception("Stage 3 build failed: "+report.summary.result);
-            Debug.Log("STAGE3_BUILD_PASS");
+            PrepareScene();Directory.CreateDirectory("../bin/unity");
+            var report=BuildPipeline.BuildPlayer(new[]{InspectionSceneBuilder.ScenePath},"../bin/unity/InspectionDemo.exe",BuildTarget.StandaloneWindows64,BuildOptions.Development);
+            if(report.summary.result!=BuildResult.Succeeded)throw new Exception("Inspection build failed: "+report.summary.result);
+            Debug.Log("INSPECTION_BUILD_PASS");
         }
     }
 }

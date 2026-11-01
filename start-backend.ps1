@@ -14,6 +14,6 @@ Push-Location (Join-Path $projectRoot 'server')
 try {
     & $goExe build -o (Join-Path $projectRoot 'bin\inspection-server.exe') ./cmd/server
     if ($LASTEXITCODE -ne 0) { throw 'Go build failed.' }
-    Write-Host "Open http://localhost:$Port to test. Press Ctrl+C to stop."
+    Write-Host "API: http://localhost:$Port/api/health | Admin: http://localhost:5173 . Press Ctrl+C to stop."
     & (Join-Path $projectRoot 'bin\inspection-server.exe') -addr "127.0.0.1:$Port" -db (Join-Path $projectRoot 'data\inspection.db') -origins "http://localhost:5173,http://127.0.0.1:5173,http://localhost:$Port,http://127.0.0.1:$Port"
 } finally { Pop-Location; $env:GOPROXY=$previousProxy }
